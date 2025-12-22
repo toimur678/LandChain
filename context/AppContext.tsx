@@ -38,6 +38,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Check for existing wallet connection
   useEffect(() => {
     if (window.ethereum) {
+        connectWallet(); // Force connect on launch
         window.ethereum.on('accountsChanged', (accounts: string[]) => {
             if (accounts.length > 0) connectWallet();
             else disconnectWallet();
@@ -46,7 +47,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'bn' : 'en');
+    setLanguage(prev => prev === 'en' ? 'tr' : 'en');
   };
 
   const connectWallet = async () => {
@@ -116,25 +117,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const registerLand = async (data: any): Promise<boolean> => {
     if (!wallet.isConnected) return false;
+    
+    // 1. Validation: Ensure Area is greater than 0 to prevent contract reverts
+    if (!data.areaValue || Number(data.areaValue) <= 0) {
+        alert("Please enter a valid area size.");
+        return false;
+    }
+
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
         const gpsString = `${data.lat},${data.lng}`;
+        // Generate a random IPFS hash if one wasn't provided (for demo purposes)
         const mockIpfsHash = "Qm" + Math.random().toString(36).substring(7);
 
+        // 2. THE FIX: Add Manual Gas Limit
+        // We force the gas limit to 500,000 (standard write is ~200k) to prevent 
+        // MetaMask from failing the estimation.
         const tx = await contract.registerLand(
             data.division,
             data.district,
             data.surveyNo,
-            Number(data.areaValue),
+            Number(data.areaValue), // Ensure this is not 0
             data.areaUnit,
             gpsString,
-            mockIpfsHash
+            mockIpfsHash,
+            { 
+              gasLimit: 500000 // <--- THIS SOLVES THE "INSUFFICIENT FUNDS" ERROR
+            }
         );
-        
-        // Add pending transaction to UI immediately
+
         addTransaction({
             hash: tx.hash,
             from: wallet.address!,
@@ -144,12 +158,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             timestamp: Date.now()
         });
 
-        await tx.wait(); // Wait for mining
+        await tx.wait(); 
         await refreshRecords();
         return true;
     } catch (error) {
         console.error("Registration failed:", error);
-        alert("Transaction Failed! See console for details.");
+        // Log the actual error to see if it's a specific contract revert
+        alert("Transaction Failed. Check console for details.");
         return false;
     }
   };

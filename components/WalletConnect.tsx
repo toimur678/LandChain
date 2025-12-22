@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { Wallet, LogOut, Loader2 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
+import { NeoButton } from './NeoComponents';
 
 const WalletConnect: React.FC = () => {
   const { wallet, connectWallet, disconnectWallet, language } = useApp();
@@ -21,21 +22,21 @@ const WalletConnect: React.FC = () => {
 
   if (wallet.isConnected && wallet.address) {
     return (
-      <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 border border-green-200/20 shadow-lg">
+      <div className="flex items-center gap-3 bg-white border-2 border-black px-4 py-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex flex-col items-end mr-2">
-          <span className="text-xs text-green-200 font-mono font-medium tracking-wide">
-            {wallet.balance} MATIC
+          <span className="text-xs font-bold uppercase tracking-wide">
+            {wallet.balance} ETH
           </span>
-          <span className="text-sm font-bold text-white font-mono">
+          <span className="text-sm font-black font-mono">
             {formatAddress(wallet.address)}
           </span>
         </div>
-        <div className="h-8 w-8 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-inner">
-             <Wallet size={16} className="text-white" />
+        <div className="h-8 w-8 bg-black text-white rounded-none flex items-center justify-center border-2 border-black">
+             <Wallet size={16} />
         </div>
         <button 
           onClick={disconnectWallet}
-          className="ml-2 text-red-300 hover:text-red-400 transition-colors p-1"
+          className="ml-2 text-neo-secondary hover:text-neo-secondary-hover transition-colors p-1 border-2 border-transparent hover:border-black"
           title={t.disconnect}
         >
           <LogOut size={18} />
@@ -45,14 +46,15 @@ const WalletConnect: React.FC = () => {
   }
 
   return (
-    <button
+    <NeoButton
       onClick={handleConnect}
       disabled={isLoading}
-      className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white px-6 py-2.5 rounded-full font-semibold shadow-lg transition-all transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+      variant="primary"
+      className="flex items-center gap-2"
     >
       {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Wallet size={20} />}
       <span>{t.connectWallet}</span>
-    </button>
+    </NeoButton>
   );
 };
 

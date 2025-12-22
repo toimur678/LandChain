@@ -5,7 +5,7 @@ export interface LandRecord {
   surveyNumber: string;
   division: string;
   district: string;
-  area: { value: number; unit: 'katha' | 'bigha' | 'acre' };
+  area: { value: number; unit: 'metrekare' | 'dönüm' | 'hektar' };
   gpsCoordinates: { lat: number; lng: number };
   documentHash: string;
   registrationDate: number;
@@ -29,7 +29,7 @@ export interface Transaction {
   timestamp: number;
 }
 
-export type Language = 'en' | 'bn';
+export type Language = 'en' | 'tr';
 
 export interface WalletState {
   address: string | null;
@@ -38,4 +38,4 @@ export interface WalletState {
   chainId?: number;
 }
 
-export type ViewState = 'home' | 'register' | 'search' | 'admin';
+export type ViewState = 'home' | 'register' | 'search' | 'admin' | 'govt_records';

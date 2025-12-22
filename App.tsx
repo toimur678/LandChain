@@ -1,52 +1,84 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from './context/AppContext';
 import { TRANSLATIONS } from './constants';
 import WalletConnect from './components/WalletConnect';
 import LandRegistrationForm from './components/LandRegistrationForm';
 import LandSearch from './components/LandSearch';
 import AdminDashboard from './components/AdminDashboard';
+import GovtRecords from './components/GovtRecords';
 import TransactionStatus from './components/TransactionStatus';
-import { Home, PlusCircle, Search, Settings } from 'lucide-react';
+import { Home, PlusCircle, Search, Settings, Lock, Database } from 'lucide-react';
 import logo from './images/logo.png';
 import { ViewState } from './types';
+import { NeoButton } from './components/NeoComponents';
+
+const GOVT_ADDRESS = "0xa8E7dF4749Eb12fD056C4D256D01D6f1933655fE";
 
 const AppContent: React.FC = () => {
-  const { language, toggleLanguage, currentView, setCurrentView } = useApp();
+  const { language, toggleLanguage, currentView, setCurrentView, wallet } = useApp();
   const t = TRANSLATIONS[language];
+
+  const isGovt = wallet.address?.toLowerCase() === GOVT_ADDRESS.toLowerCase();
+  
+  // Redirect non-govt users if they try to access restricted views
+  useEffect(() => {
+    if (!isGovt && (currentView === 'admin' || currentView === 'search' || currentView === 'govt_records')) {
+        // If they are on a restricted view, force them to register or home
+        setCurrentView('register');
+    }
+  }, [currentView, isGovt, setCurrentView]);
 
   const renderView = () => {
     switch (currentView) {
       case 'register':
-        return <LandRegistrationForm />;
+        return isGovt ? <AccessDenied /> : <LandRegistrationForm />;
       case 'search':
-        return <LandSearch />;
+        return isGovt ? <LandSearch /> : <AccessDenied />;
       case 'admin':
-        return <AdminDashboard />;
+        return isGovt ? <AdminDashboard /> : <AccessDenied />;
+      case 'govt_records':
+        return isGovt ? <GovtRecords /> : <AccessDenied />;
       case 'home':
       default:
         return (
           <div className="text-center py-20 space-y-8 animate-fade-in">
-             <h1 className="text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-800 to-green-600 tracking-tight">
-               {language === 'en' ? 'Secure Land Registry' : 'নিরাপদ জমি নিবন্ধন'}
+             <h1 className="text-5xl md:text-7xl font-black leading-none uppercase tracking-tighter">
+               {language === 'en' ? 'Secure Land Registry' : 'Güvenli Arazi Kayıt Sistemi'}
              </h1>
-             <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+             <p className="text-xl max-w-2xl mx-auto font-bold">
+               <span className="bg-black text-white inline-block p-2">
                {language === 'en' 
-                 ? "Bangladesh's first decentralized land registry powered by Polygon blockchain. Transparent, immutable, and secure."
-                 : "পলিগন ব্লকচেইন দ্বারা চালিত বাংলাদেশের প্রথম বিকেন্দ্রীভূত জমি নিবন্ধন ব্যবস্থা। স্বচ্ছ, অপরিবর্তনীয় এবং নিরাপদ।"}
+                 ? "First decentralized land registry powered by BlockChain."
+                 : "Blockchain teknolojisi ile güçlendirilmiş merkezi olmayan arazi kayıt sistemi."}
+               </span>
              </p>
-             <div className="flex justify-center gap-4 pt-4">
-               <button 
-                 onClick={() => setCurrentView('search')}
-                 className="px-8 py-3 bg-white text-green-700 font-bold rounded-full shadow-lg border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
-               >
-                 <Search size={20} /> {t.navSearch}
-               </button>
-               <button 
-                 onClick={() => setCurrentView('register')}
-                 className="px-8 py-3 bg-green-700 text-white font-bold rounded-full shadow-lg shadow-green-700/30 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
-               >
-                 <PlusCircle size={20} /> {t.navRegister}
-               </button>
+             <div className="flex justify-center gap-4 pt-8">
+               {isGovt ? (
+                 <>
+                   <NeoButton 
+                     variant="secondary"
+                     onClick={() => setCurrentView('search')}
+                     className="flex items-center gap-2"
+                   >
+                     <Search size={20} /> {t.navSearch}
+                   </NeoButton>
+                   <NeoButton 
+                     variant="primary"
+                     onClick={() => setCurrentView('govt_records')}
+                     className="flex items-center gap-2"
+                   >
+                     <Database size={20} /> {t.navGovtRecords}
+                   </NeoButton>
+                 </>
+               ) : (
+                 <NeoButton 
+                   variant="primary"
+                   onClick={() => setCurrentView('register')}
+                   className="flex items-center gap-2"
+                 >
+                   <PlusCircle size={20} /> {t.navRegister}
+                 </NeoButton>
+               )}
              </div>
           </div>
         );
@@ -54,33 +86,43 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-gray-900 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+    <div className="min-h-screen bg-neo-bg text-black">
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+      <nav className="bg-white border-b-4 border-black p-4 mb-8 sticky top-0 z-40">
+        <div className="container mx-auto flex items-center justify-between">
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setCurrentView('home')}
           >
-            <img src={logo} alt="logo" className="w-14 h-14 object-cover rounded-lg transform rotate-3" />
-            <span className="text-xl font-bold tracking-tight text-gray-800 hidden md:block">
-              {t.appTitle}
+            {/* <img src={logo} alt="logo" className="w-16 h-16" /> */}
+            <span className="text-2xl md:text-3xl font-black uppercase tracking-tighter hidden md:block">
+              LandChain
             </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             <NavLink active={currentView === 'home'} onClick={() => setCurrentView('home')} icon={<Home size={18} />}>{t.navHome}</NavLink>
-            <NavLink active={currentView === 'register'} onClick={() => setCurrentView('register')} icon={<PlusCircle size={18} />}>{t.navRegister}</NavLink>
-            <NavLink active={currentView === 'search'} onClick={() => setCurrentView('search')} icon={<Search size={18} />}>{t.navSearch}</NavLink>
-            <NavLink active={currentView === 'admin'} onClick={() => setCurrentView('admin')} icon={<Settings size={18} />}>{t.navAdmin}</NavLink>
+            
+            {!isGovt && (
+                <NavLink active={currentView === 'register'} onClick={() => setCurrentView('register')} icon={<PlusCircle size={18} />}>{t.navRegister}</NavLink>
+            )}
+            
+            {/* Restricted Links */}
+            {isGovt && (
+                <>
+                    <NavLink active={currentView === 'govt_records'} onClick={() => setCurrentView('govt_records')} icon={<Database size={18} />}>{t.navGovtRecords}</NavLink>
+                    <NavLink active={currentView === 'search'} onClick={() => setCurrentView('search')} icon={<Search size={18} />}>{t.navSearch}</NavLink>
+                    <NavLink active={currentView === 'admin'} onClick={() => setCurrentView('admin')} icon={<Settings size={18} />}>{t.navAdmin}</NavLink>
+                </>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
              <button 
                onClick={toggleLanguage}
-               className="font-bold text-sm text-gray-600 hover:text-green-700 transition-colors px-3 py-1 rounded-full border border-gray-200"
+               className="font-bold text-sm border-2 border-black px-3 py-1 hover:bg-black hover:text-white transition-colors uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none"
              >
-               {language === 'en' ? 'বাংলা' : 'ENG'}
+               {language === 'en' ? 'TR' : 'EN'}
              </button>
              <WalletConnect />
           </div>
@@ -88,7 +130,7 @@ const AppContent: React.FC = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 md:py-12">
+      <main className="container mx-auto px-4 py-8">
         {renderView()}
       </main>
 
@@ -98,11 +140,19 @@ const AppContent: React.FC = () => {
   );
 };
 
+const AccessDenied: React.FC = () => (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Lock size={64} className="mb-4 text-red-500" />
+        <h2 className="text-3xl font-black uppercase">Access Denied</h2>
+        <p className="font-bold">You do not have permission to view this page.</p>
+    </div>
+);
+
 const NavLink: React.FC<{ children: React.ReactNode, active: boolean, onClick: () => void, icon: React.ReactNode }> = ({ children, active, onClick, icon }) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-2 font-medium transition-colors ${
-      active ? 'text-green-700' : 'text-gray-500 hover:text-gray-900'
+    className={`flex items-center gap-2 font-bold uppercase tracking-wide border-b-2 transition-all ${
+      active ? 'border-neo-primary text-neo-primary' : 'border-transparent hover:border-black'
     }`}
   >
     {icon}

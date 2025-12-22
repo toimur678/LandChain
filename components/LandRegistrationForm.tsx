@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../constants';
-import { MapPin, User, FileText, CheckCircle, Upload, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
+import { MapPin, User, FileText, CheckCircle, Upload, ChevronRight, ChevronLeft, Loader2, Scan } from 'lucide-react';
+import { NeoButton, NeoCard, NeoInput } from './NeoComponents';
+import Tesseract from 'tesseract.js';
 
 const LandRegistrationForm: React.FC = () => {
   const { language, wallet, connectWallet, registerLand, setCurrentView } = useApp();
@@ -9,12 +11,16 @@ const LandRegistrationForm: React.FC = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // OCR State
+  const [isScanning, setIsScanning] = useState(false);
+  const [ocrResult, setOcrResult] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
-    division: 'Dhaka',
+    division: 'İstanbul',
     district: '',
     surveyNo: '',
     areaValue: '',
-    areaUnit: 'katha',
+    areaUnit: 'metrekare',
     lat: '',
     lng: '',
     ownerName: '',
@@ -29,6 +35,27 @@ const LandRegistrationForm: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       handleChange('file', e.target.files[0]);
+      setOcrResult(null); // Reset OCR on new file
+    }
+  };
+
+  const scanDocument = async () => {
+    if (!formData.file) return;
+    setIsScanning(true);
+    setOcrResult(null);
+    
+    try {
+        const result = await Tesseract.recognize(
+            formData.file,
+            'eng+tur', // English + Turkish
+            { logger: m => console.log(m) }
+        );
+        setOcrResult(result.data.text);
+    } catch (error) {
+        console.error("OCR Error:", error);
+        setOcrResult("Failed to extract text. Please try a clearer image.");
+    } finally {
+        setIsScanning(false);
     }
   };
 
@@ -49,19 +76,19 @@ const LandRegistrationForm: React.FC = () => {
 
   if (!wallet.isConnected) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-xl border border-gray-100 text-center">
-        <div className="bg-green-100 p-4 rounded-full mb-4">
-            <User size={48} className="text-green-600" />
+      <NeoCard className="flex flex-col items-center justify-center p-12 text-center max-w-2xl mx-auto">
+        <div className="bg-neo-accent p-4 border-2 border-black mb-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <User size={48} className="text-black" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">{t.navRegister}</h2>
-        <p className="text-gray-500 mb-6">Connect your wallet to write to the Sepolia Blockchain.</p>
-        <button 
+        <h2 className="text-2xl font-black uppercase mb-2">{t.navRegister}</h2>
+        <p className="text-gray-600 font-bold mb-6">Connect your wallet to write to the Sepolia Blockchain.</p>
+        <NeoButton 
           onClick={connectWallet}
-          className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all"
+          variant="primary"
         >
           {t.connectWallet}
-        </button>
-      </div>
+        </NeoButton>
+      </NeoCard>
     );
   }
 
@@ -70,37 +97,37 @@ const LandRegistrationForm: React.FC = () => {
     <div className="space-y-4 animate-fade-in">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.division}</label>
-          <select className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.division} onChange={e => handleChange('division', e.target.value)}>
-            <option>Dhaka</option><option>Chittagong</option><option>Rajshahi</option><option>Khulna</option><option>Sylhet</option>
+          <label className="block text-sm font-bold uppercase mb-1">{t.division}</label>
+          <select className="w-full p-3 border-2 border-black font-bold focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow bg-white" value={formData.division} onChange={e => handleChange('division', e.target.value)}>
+            <option>İstanbul</option><option>Ankara</option><option>İzmir</option><option>Antalya</option><option>Bursa</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.district}</label>
-          <input type="text" className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.district} onChange={e => handleChange('district', e.target.value)} placeholder="e.g. Gulshan" />
+          <label className="block text-sm font-bold uppercase mb-1">{t.district}</label>
+          <NeoInput type="text" value={formData.district} onChange={e => handleChange('district', e.target.value)} placeholder="e.g. Kadıköy" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{t.surveyNo}</label>
-        <input type="text" className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.surveyNo} onChange={e => handleChange('surveyNo', e.target.value)} placeholder="CS-1234 / RS-5678" />
+        <label className="block text-sm font-bold uppercase mb-1">{t.surveyNo}</label>
+        <NeoInput type="text" value={formData.surveyNo} onChange={e => handleChange('surveyNo', e.target.value)} placeholder="TD-1234 / TS-5678" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">{t.area}</label>
-           <input type="number" className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.areaValue} onChange={e => handleChange('areaValue', e.target.value)} />
+           <label className="block text-sm font-bold uppercase mb-1">{t.area}</label>
+           <NeoInput type="number" value={formData.areaValue} onChange={e => handleChange('areaValue', e.target.value)} />
         </div>
         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">{t.unit}</label>
-           <select className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.areaUnit} onChange={e => handleChange('areaUnit', e.target.value)}>
-            <option value="katha">Katha</option><option value="bigha">Bigha</option><option value="acre">Acre</option>
+           <label className="block text-sm font-bold uppercase mb-1">{t.unit}</label>
+           <select className="w-full p-3 border-2 border-black font-bold focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow bg-white" value={formData.areaUnit} onChange={e => handleChange('areaUnit', e.target.value)}>
+            <option value="metrekare">Metrekare (m²)</option><option value="dönüm">Dönüm</option><option value="hektar">Hektar</option>
           </select>
         </div>
       </div>
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-        <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2"><MapPin size={16} /> GPS Coordinates</h4>
+      <div className="bg-neo-bg p-4 border-2 border-black">
+        <h4 className="text-sm font-black uppercase mb-2 flex items-center gap-2"><MapPin size={16} /> GPS Coordinates</h4>
         <div className="grid grid-cols-2 gap-4">
-            <input type="number" placeholder={t.lat} className="w-full p-2 border border-blue-200 rounded text-sm" value={formData.lat} onChange={e => handleChange('lat', e.target.value)} />
-            <input type="number" placeholder={t.lng} className="w-full p-2 border border-blue-200 rounded text-sm" value={formData.lng} onChange={e => handleChange('lng', e.target.value)} />
+            <NeoInput type="number" placeholder={t.lat} value={formData.lat} onChange={e => handleChange('lat', e.target.value)} />
+            <NeoInput type="number" placeholder={t.lng} value={formData.lng} onChange={e => handleChange('lng', e.target.value)} />
         </div>
       </div>
     </div>
@@ -109,19 +136,19 @@ const LandRegistrationForm: React.FC = () => {
   const renderStep2 = () => (
     <div className="space-y-4 animate-fade-in">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.ownerName}</label>
-          <input type="text" className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.ownerName} onChange={e => handleChange('ownerName', e.target.value)} placeholder="Full Name as per NID" />
+          <label className="block text-sm font-bold uppercase mb-1">{t.ownerName}</label>
+          <NeoInput type="text" value={formData.ownerName} onChange={e => handleChange('ownerName', e.target.value)} placeholder="Full Name as per NID" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.nid}</label>
-          <input type="text" className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.nid} onChange={e => handleChange('nid', e.target.value)} placeholder="National ID Number" />
+          <label className="block text-sm font-bold uppercase mb-1">{t.nid}</label>
+          <NeoInput type="text" value={formData.nid} onChange={e => handleChange('nid', e.target.value)} placeholder="National ID Number" />
         </div>
     </div>
   );
 
   const renderStep3 = () => (
     <div className="space-y-6 animate-fade-in">
-        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 relative hover:bg-gray-100 transition-colors">
+        <div className="border-4 border-dashed border-black p-8 text-center bg-white relative hover:bg-gray-50 transition-colors">
             <input 
                 type="file" 
                 accept=".pdf,.png,.jpg,.jpeg"
@@ -130,33 +157,55 @@ const LandRegistrationForm: React.FC = () => {
             />
             {formData.file ? (
                 <div className="flex flex-col items-center">
-                    <CheckCircle className="mx-auto text-green-500 mb-3" size={48} />
-                    <h3 className="font-medium text-green-700">{formData.file.name}</h3>
-                    <p className="text-xs text-green-600 mt-1">Ready for upload</p>
+                    <CheckCircle className="mx-auto text-neo-primary mb-3" size={48} />
+                    <h3 className="font-black uppercase">{formData.file.name}</h3>
+                    <p className="text-xs font-bold mt-1">Ready for upload</p>
                 </div>
             ) : (
                 <>
-                    <Upload className="mx-auto text-gray-400 mb-3" size={48} />
-                    <h3 className="font-medium text-gray-700">{t.uploadDeed}</h3>
-                    <p className="text-xs text-gray-500 mt-1">Simulated IPFS Upload (Metadata Only)</p>
-                    <p className="text-xs text-gray-400 mt-1">Supported: PDF, PNG, JPG, JPEG</p>
+                    <Upload className="mx-auto text-black mb-3" size={48} />
+                    <h3 className="font-black uppercase">{t.uploadDeed}</h3>
+                    <p className="text-xs font-bold mt-1">Simulated IPFS Upload (Metadata Only)</p>
+                    <p className="text-xs font-bold mt-1">Supported: PDF, PNG, JPG, JPEG</p>
                 </>
             )}
         </div>
+        
+        {/* OCR Section */}
+        {formData.file && (
+            <div className="flex flex-col items-center gap-4">
+                <NeoButton 
+                    variant="secondary" 
+                    onClick={scanDocument} 
+                    disabled={isScanning}
+                    className="flex items-center gap-2"
+                >
+                    {isScanning ? <Loader2 className="animate-spin" size={18} /> : <Scan size={18} />}
+                    {isScanning ? "Taranıyor..." : "Belgeyi Tara (OCR)"}
+                </NeoButton>
+                
+                {ocrResult && (
+                    <div className="w-full bg-gray-100 p-4 border-2 border-black mt-2 max-h-60 overflow-y-auto">
+                        <h4 className="font-black uppercase text-sm mb-2 border-b-2 border-gray-300 pb-1">Extracted Text:</h4>
+                        <pre className="whitespace-pre-wrap text-xs font-mono">{ocrResult}</pre>
+                    </div>
+                )}
+            </div>
+        )}
     </div>
   );
 
   const renderStep4 = () => (
       <div className="space-y-4 animate-fade-in">
-        <h3 className="font-bold text-gray-800 border-b pb-2">{t.reviewTitle}</h3>
-        <div className="grid grid-cols-2 gap-y-4 text-sm">
-            <div className="text-gray-500">{t.division}:</div><div className="font-medium">{formData.division}</div>
-            <div className="text-gray-500">{t.surveyNo}:</div><div className="font-medium">{formData.surveyNo}</div>
-            <div className="text-gray-500">{t.area}:</div><div className="font-medium">{formData.areaValue} {formData.areaUnit}</div>
+        <h3 className="font-black uppercase border-b-2 border-black pb-2">{t.reviewTitle}</h3>
+        <div className="grid grid-cols-2 gap-y-4 text-sm font-bold">
+            <div className="text-gray-600 uppercase">{t.division}:</div><div>{formData.division}</div>
+            <div className="text-gray-600 uppercase">{t.surveyNo}:</div><div>{formData.surveyNo}</div>
+            <div className="text-gray-600 uppercase">{t.area}:</div><div>{formData.areaValue} {formData.areaUnit}</div>
         </div>
-        <div className="bg-orange-50 border border-orange-100 p-3 rounded-lg flex justify-between items-center mt-4">
-            <span className="text-sm text-orange-800 font-medium">Est. Network Fee (Sepolia)</span>
-            <span className="font-mono font-bold text-orange-900">~0.0004 ETH</span>
+        <div className="bg-neo-accent border-2 border-black p-3 flex justify-between items-center mt-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <span className="text-sm font-black uppercase text-black">Est. Network Fee (Sepolia)</span>
+            <span className="font-mono font-black text-black">~0.0004 ETH</span>
         </div>
       </div>
   );
@@ -167,37 +216,51 @@ const LandRegistrationForm: React.FC = () => {
       <div className="flex justify-between items-center mb-8 relative">
         <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-200 -z-10"></div>
         {[1, 2, 3, 4].map((s) => (
-          <div key={s} className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-300 ${step >= s ? 'bg-green-600 text-white' : 'bg-white border-2 border-gray-200 text-gray-400'}`}>
+          <div key={s} className={`w-10 h-10 border-2 border-black flex items-center justify-center font-bold text-sm transition-colors duration-300 ${step >= s ? 'bg-neo-primary text-white' : 'bg-white text-black'}`}>
             {step > s ? <CheckCircle size={18} /> : s}
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 min-h-[400px]">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-            {step === 4 ? <><CheckCircle className="text-green-600" /> {t.step4}</> : `Step ${step}`}
+      <NeoCard className="min-h-[400px]">
+        <h2 className="text-2xl font-black uppercase mb-6 flex items-center gap-2 border-b-2 border-black pb-4">
+            {step === 4 ? <><CheckCircle className="text-neo-primary" /> {t.step4}</> : `Step ${step}`}
         </h2>
 
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
         {step === 4 && renderStep4()}
-      </div>
+      </NeoCard>
 
-      <div className="flex justify-between mt-6">
-        <button onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1 || isSubmitting} className="px-6 py-2.5 rounded-lg font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50">
+      <div className="flex justify-between mt-8">
+        <NeoButton 
+            variant="secondary"
+            onClick={() => setStep(s => Math.max(1, s - 1))} 
+            disabled={step === 1 || isSubmitting} 
+            className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <ChevronLeft size={18} /> {t.back}
-        </button>
+        </NeoButton>
         
         {step < 4 ? (
-            <button onClick={() => setStep(s => Math.min(4, s + 1))} className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-2.5 rounded-lg font-bold shadow-lg flex items-center gap-2">
+            <NeoButton 
+                variant="primary"
+                onClick={() => setStep(s => Math.min(4, s + 1))} 
+                className="flex items-center gap-2"
+            >
             {t.next} <ChevronRight size={18} />
-            </button>
+            </NeoButton>
         ) : (
-            <button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-lg font-bold shadow-lg flex items-center gap-2 disabled:opacity-70">
+            <NeoButton 
+                variant="primary"
+                onClick={handleSubmit} 
+                disabled={isSubmitting} 
+                className="flex items-center gap-2 disabled:opacity-70"
+            >
             {isSubmitting ? <Loader2 className="animate-spin" /> : <CheckCircle size={18} />}
             {t.submit}
-            </button>
+            </NeoButton>
         )}
       </div>
     </div>
